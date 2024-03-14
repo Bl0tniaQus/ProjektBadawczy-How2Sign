@@ -3,9 +3,7 @@ import platform
 import json
 import numpy
 from numpy.random import seed
-from math import sqrt
 from sklearn.preprocessing import minmax_scale
-from sklearn.model_selection import train_test_split
 from keras.layers import Input, Dense
 from keras.models import Model
 
