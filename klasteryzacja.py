@@ -4,6 +4,7 @@ import json
 import numpy
 from numpy.random import seed
 from sklearn.preprocessing import minmax_scale
+from sklearn.cluster import OPTICS
 from keras.layers import Input, Dense
 from keras.models import Model
 
@@ -101,28 +102,26 @@ autoencoder.fit(train_scaled, train_scaled, epochs = 10, batch_size = 32, shuffl
 # Wyodrębnienie modelu samego enkodera
 encoder = Model(inputs = input_dim, outputs = encoded13)
 
-# Otrzymanie wynikowych zbiorów testowych na wyjściu samego enkodera i autoenkodera
-encoded_test = numpy.array(encoder.predict(test_scaled))
-autoencoded_test = numpy.array(autoencoder.predict(test_scaled))
+# Enkodowanie zbioru train 
+encoded_train = numpy.array(encoder.predict(train_scaled))
 
-# Porównanie wymiarów
-print("Dimensions:")
-print("Original:")
-print(test_scaled.shape)
-print("Encoded:")
-print(encoded_test.shape)
-print("Decoded:")
-print(autoencoded_test.shape)
-print("-----------")
-
-#Prosty test na to jak bardzo różnią się dane wejściowe od zdekodowanych przez autoenkoder
-avg = 0
-for i in range(test_scaled.shape[0]):
-	for j in range(n_attributes):
-		diff = abs(test_scaled[i][j] - autoencoded_test[i][j])
-		avg+=diff
-avg = avg / (n_attributes * test_scaled.shape[0]) 
-print(avg)
+# Utworzenie modelu klasteryzacji i dopasowanie do niego zbioru train
+clustering = OPTICS(min_samples = 5).fit(encoded_train)
+# Wyodrębnienie wektora z etykietami klastrów
+labels = clustering.labels_
+labels_set = set(labels)
+print("Length of the labels vector:")
+print(numpy.shape(labels))
+print("Number of samples:")
+print(numpy.shape(encoded_train))
+print("Number of unique labels:"
+print(len(labels_set))
+minus_ones = 0
+for i in labels:
+	if i==-1:
+		minus_ones+=1
+print("Number of -1 labels:")
+print(minus_ones)
 
 
 		
