@@ -21,32 +21,44 @@ else:
 train_array = []
 test_array = []
 val_array = []
+# w listach x_video każdy element jest listą zawierającą podlistę w formacie [nazwa filmu, liczba klatek]
+train_videos = []
+test_videos = []
+val_videos = []
 #wczytywanie danych
 for directory in os.scandir(data_dir+train_dir):
+	n = 0
 	for json_filename in os.scandir(directory):
+		n = n + 1
 		json_file = open(json_filename.path, "r")
 		json_file_content = json_file.read()
 		json_file.close()
 		json_content = json.loads(json.dumps(json.loads(json_file_content)["people"]))[0]
 		vector = json_content["pose_keypoints_2d"] + json_content["face_keypoints_2d"] + json_content["hand_left_keypoints_2d"] + json_content["hand_right_keypoints_2d"]
 		train_array.append(vector)
+	train_videos.append([directory,n])
 for directory in os.scandir(data_dir+test_dir):
+	n = 0
 	for json_filename in os.scandir(directory):
+		n = n + 1
 		json_file = open(json_filename.path, "r")
 		json_file_content = json_file.read()
 		json_file.close()
 		json_content = json.loads(json.dumps(json.loads(json_file_content)["people"]))[0]
 		vector = json_content["pose_keypoints_2d"] + json_content["face_keypoints_2d"] + json_content["hand_left_keypoints_2d"] + json_content["hand_right_keypoints_2d"]
 		test_array.append(vector)
+	test_videos.append([directory,n])
 for directory in os.scandir(data_dir+val_dir):
+	n = 0
 	for json_filename in os.scandir(directory):
+		n = n + 1
 		json_file = open(json_filename.path, "r")
 		json_file_content = json_file.read()
 		json_file.close()
 		json_content = json.loads(json.dumps(json.loads(json_file_content)["people"]))[0]
 		vector = json_content["pose_keypoints_2d"] + json_content["face_keypoints_2d"] + json_content["hand_left_keypoints_2d"] + json_content["hand_right_keypoints_2d"]
 		val_array.append(vector)
-		
+	val_videos.append([directory,n])
 train_array = numpy.array(train_array)
 test_array = numpy.array(test_array)
 val_array = numpy.array(val_array)
@@ -97,7 +109,7 @@ autoencoder = Model(inputs = input_dim, outputs = decoded13)
 # Kompilacja modelu
 autoencoder.compile(optimizer = 'adadelta', loss = 'binary_crossentropy')
 # Uczenie modelu autoenkodera
-autoencoder.fit(train_scaled, train_scaled, epochs = 10, batch_size = 32, shuffle = False, validation_data = (val_scaled,val_scaled))
+autoencoder.fit(train_scaled, train_scaled, epochs = 3, batch_size = 32, shuffle = False, validation_data = (val_scaled,val_scaled))
 
 # Wyodrębnienie modelu samego enkodera
 encoder = Model(inputs = input_dim, outputs = encoded13)
@@ -105,16 +117,23 @@ encoder = Model(inputs = input_dim, outputs = encoded13)
 # Enkodowanie zbioru train 
 encoded_train = numpy.array(encoder.predict(train_scaled))
 
-# Utworzenie modelu klasteryzacji i dopasowanie do niego zbioru train
+# Utworzenie modelu klasteryzacji (algorytm OPTICS) i dopasowanie do niego zbioru train
 clustering = OPTICS(min_samples = 5).fit(encoded_train)
 # Wyodrębnienie wektora z etykietami klastrów
 labels = clustering.labels_
 labels_set = set(labels)
-print("Length of the labels vector:")
-print(numpy.shape(labels))
-print("Number of samples:")
-print(numpy.shape(encoded_train))
-print("Number of unique labels:"
+# Utworzenie tablicy videos_converted, gdzie każdy element jest podlistą
+# w postaci [nazwa filmu, lista etykiet kolejnych klatek]
+train_videos_converted = []
+counter = 0
+for i in train_videos:
+	frames_labelled = []
+	for j in range(i[1]):
+		frames_labelled.append(labels[counter+j])
+	counter = counter + i[1]
+	train_videos_converted.append([i[0],frames_labelled])
+
+print("Number of unique labels:")
 print(len(labels_set))
 minus_ones = 0
 for i in labels:
